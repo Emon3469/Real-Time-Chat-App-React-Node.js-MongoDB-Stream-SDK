@@ -19,7 +19,7 @@ const __dirname = path.resolve();
 
 app.use(cors({
     origin: process.env.NODE_ENV === "production" 
-        ? ["https://your-frontend-domain.vercel.app", "https://your-frontend-domain.onrender.com"]
+        ? ["https://real-time-chat-app-react-node-js-mongo-db-stream-sdk.vercel.app"]
         : "http://localhost:5173",
     credentials: true,
 }));
