@@ -13,7 +13,7 @@ import { connectDB } from "./lib/db.js";
 
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5001;
 
 const __dirname = path.resolve();
 
@@ -32,7 +32,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 
-if(process.env.NODE_ENV === "production") {
+// For Vercel serverless deployment, we don't need static file serving
+// as it's handled by the vercel.json configuration
+if(process.env.NODE_ENV === "production" && !process.env.VERCEL) {
     app.use(express.static(path.join(__dirname, "../frontend/dist")))
 
     app.get("*", (req, res) => {
@@ -40,7 +42,18 @@ if(process.env.NODE_ENV === "production") {
     });
 }
 
-app.listen(PORT, () => {
-    console.log(`Server is running on Port ${PORT}`);
+// For Vercel serverless functions, we need to export the app
+if (process.env.VERCEL) {
     connectDB();
-})
+}
+
+// Only listen when not in Vercel environment
+if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`Server is running on Port ${PORT}`);
+        connectDB();
+    });
+}
+
+// Export for Vercel serverless functions
+export default app;
