@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Real-time chat application with React frontend and Node.js backend",
   "scripts": {
-    "build": "cd frontend/chat_app_fronend && npm install && npm run build",
+    "build": "npm run install-backend && cd frontend/chat_app_fronend && npm install && npm run build",
     "start": "cd backend && npm start",
     "install-backend": "cd backend && npm install",
     "install-frontend": "cd frontend/chat_app_fronend && npm install",
