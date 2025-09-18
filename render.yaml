@@ -2,10 +2,8 @@ services:
   - type: web
     name: chat-app-backend
     env: node
-    plan: free
-    root: ./backend
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -20,13 +18,10 @@ services:
       - key: JWT_SECRET_KEY
         sync: false
 
-  - type: web
+  - type: static
     name: chat-app-frontend
-    env: static
-    plan: free
-    root: ./frontend/chat_app_fronend
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    buildCommand: cd frontend/chat_app_fronend && npm install && npm run build
+    staticPublishPath: frontend/chat_app_fronend/dist
     envVars:
       - key: VITE_STREAM_API_KEY
         sync: false
