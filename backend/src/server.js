@@ -35,10 +35,10 @@ app.use("/api/chat", chatRoutes);
 // For Vercel serverless deployment, we don't need static file serving
 // as it's handled by the vercel.json configuration
 if(process.env.NODE_ENV === "production" && !process.env.VERCEL) {
-    app.use(express.static(path.join(__dirname, "../frontend/dist")))
+    app.use(express.static(path.join(__dirname, "../frontend/chat_app_fronend/dist")))
 
     app.get("*", (req, res) => {
-        res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+        res.sendFile(path.join(__dirname, "../frontend", "chat_app_fronend", "dist", "index.html"));
     });
 }
 
