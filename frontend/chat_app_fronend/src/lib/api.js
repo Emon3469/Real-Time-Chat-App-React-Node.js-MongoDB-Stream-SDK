@@ -11,8 +11,9 @@ export const getAuthUser = async () => {
         return res.data;
     }
     catch(error){
-        console.log("Error in getAuthUser:", error);
-        return null;
+        console.log("Error in getAuthUser:", error.response?.data || error.message);
+        // Don't throw the error, just return null to allow the app to continue
+        return { user: null };
     }
 };
 
