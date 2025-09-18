@@ -20,7 +20,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/chat_app_fronend/dist/index.html"
+      "dest": "frontend/chat_app_fronend/$1"
     }
   ],
   "env": {
