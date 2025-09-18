@@ -6,6 +6,7 @@ services:
     root: ./backend
     buildCommand: npm install
     startCommand: npm start
+    dockerfilePath: ""
     envVars:
       - key: NODE_ENV
         value: production
@@ -27,6 +28,7 @@ services:
     root: ./frontend/chat_app_fronend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
+    dockerfilePath: ""
     envVars:
       - key: VITE_STREAM_API_KEY
         sync: false
