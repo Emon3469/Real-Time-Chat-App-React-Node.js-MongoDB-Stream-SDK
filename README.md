@@ -2,6 +2,12 @@
 
 A modern real-time chat application built with React, Node.js, Express, MongoDB, and Stream Chat SDK. Features include user authentication, real-time messaging, and a beautiful UI with TailwindCSS and DaisyUI.
 
+<img width="1095" height="637" alt="project3" src="https://github.com/user-attachments/assets/e4a6f878-208e-4e92-b5bf-036d28a439a1" />
+<img width="1919" height="953" alt="project3_a" src="https://github.com/user-attachments/assets/db17cb4c-464e-444c-b659-cc091bc9a677" />
+<img width="1909" height="951" alt="project3_b" src="https://github.com/user-attachments/assets/925f877f-fba0-4699-bf84-c755d3321c8a" />
+
+
+
 ## 🚀 Features
 
 - **Real-time Messaging**: Instant messaging powered by Stream Chat SDK
