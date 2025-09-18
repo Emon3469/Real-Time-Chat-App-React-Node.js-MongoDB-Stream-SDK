@@ -3,8 +3,9 @@ services:
     name: chat-app-backend
     env: node
     plan: free
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && npm start
+    root: ./backend
+    buildCommand: npm install
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -23,8 +24,9 @@ services:
     name: chat-app-frontend
     env: static
     plan: free
-    buildCommand: cd frontend/chat_app_fronend && npm install && npm run build
-    staticPublishPath: frontend/chat_app_fronend/dist
+    root: ./frontend/chat_app_fronend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
     envVars:
       - key: VITE_STREAM_API_KEY
         sync: false
