@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
+import path from "path";
 
 import authRoutes from "./routes/auth_route.js";
 import userRoutes from "./routes/user_route.js";
@@ -13,6 +14,8 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+const __dirname = path.resolve();
 
 // CORS configuration
 const corsOptions = {
@@ -41,6 +44,15 @@ app.get('/health', (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
+
+// Serve static files in production
+if (process.env.NODE_ENV === "production") {
+    app.use(express.static(path.join(__dirname, "../frontend/chat_app_fronend/dist")));
+
+    app.get("*", (req, res) => {
+        res.sendFile(path.join(__dirname, "../frontend/chat_app_fronend", "dist", "index.html"));
+    });
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
