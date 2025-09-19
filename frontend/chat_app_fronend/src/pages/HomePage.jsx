@@ -13,6 +13,7 @@ import { capitialize } from "../lib/utils"
 import FriendCard from "../components/FriendCard";
 import { getLanguageFlag } from "../components/getLanguageFlag";
 import NoFriendsFound from "../components/NoFriendsFound";
+import CardSkeleton from "../components/CardSkeleton";
 
 const HomePage = () => {
   const queryClient = useQueryClient();
@@ -60,9 +61,7 @@ const HomePage = () => {
         </div>
         {
           loadingFriends ? (
-            <div className="flex justify-center py-12">
-              <span className="loading loading-spinner loading-lg"></span>
-            </div>
+            <CardSkeleton count={4} />
           ) : friends.length === 0 ? (
             <NoFriendsFound />
           ) : (
@@ -89,9 +88,7 @@ const HomePage = () => {
           </div>
           {
             loadingUsers ? (
-                <div className="flex justify-center py-12">
-                  <span className="loading loading-spinner loading-lg"></span>
-               </div>
+                <CardSkeleton count={6} />
             ) : recommendedUsers.length === 0 ? (
                <div className="card bg-base-200 p-6 text-center">
                  <h3 className="font-semibold text-lg mb-2">No Recommendations Available</h3>
