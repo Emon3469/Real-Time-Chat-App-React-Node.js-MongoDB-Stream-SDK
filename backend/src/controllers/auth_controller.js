@@ -106,7 +106,13 @@ export async function login(req , res) {
 }
 
 export function logout(req, res) {
-    res.clearCookie("jwt");
+    // clearCookie must use the same options that were used when the cookie was set,
+    // otherwise the browser ignores the clear instruction (especially sameSite/secure in production)
+    res.clearCookie("jwt", {
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        secure: process.env.NODE_ENV === "production",
+    });
     res.status(200).json({success: true, message: "Logout Successfully"});
 }
 

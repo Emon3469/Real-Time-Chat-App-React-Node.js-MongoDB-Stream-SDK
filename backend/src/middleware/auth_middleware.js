@@ -26,6 +26,10 @@ export const protectRoute = async (req, res, next) => {
         next();
     }
     catch(error){
+        // JWT verification throws JsonWebTokenError / TokenExpiredError — these are 401, not 500
+        if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+            return res.status(401).json({ message: "Unauthorized - Invalid or expired token" });
+        }
         console.log("Error in ProtectRoute middleware", error);
         res.status(500).json({message: "Internal Server Error"});
     }

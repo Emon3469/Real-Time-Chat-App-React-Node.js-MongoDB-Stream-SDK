@@ -49,7 +49,8 @@ export async function sendFriendRequest(req, res){
             return res.status(404).json({ message: "Recipient not found"});
         }
 
-        if(recipient.friends.includes(myId)){
+        // friends is an array of ObjectIds; compare via .toString() to match the string myId
+        if(recipient.friends.some(f => f.toString() === myId)){
             return res.status(400).json({ message: "You are already friends with this user"});
         }
 

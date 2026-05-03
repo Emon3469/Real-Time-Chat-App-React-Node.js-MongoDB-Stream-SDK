@@ -1,6 +1,7 @@
 {
   "name": "chat-app-monorepo",
   "version": "1.0.0",
+  "type": "module",
   "description": "Real-time chat application with React frontend and Node.js backend",
   "scripts": {
     "build": "npm run install-backend && cd frontend/chat_app_fronend && npm install && npm run build",

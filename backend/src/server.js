@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import path from "path";
+import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/auth_route.js";
 import userRoutes from "./routes/user_route.js";
@@ -15,60 +16,72 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-const __dirname = path.resolve();
+// Correct __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// CORS configuration
+// CORS: use FRONTEND_URL env var so any deployment target works
+const allowedOrigins = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(",")
+    : process.env.NODE_ENV === "production"
+        ? ["https://chat-app-frontend.onrender.com"]
+        : ["http://localhost:5173", "http://localhost:5174"];
+
 const corsOptions = {
-    origin: process.env.NODE_ENV === "production" 
-        ? ["https://chat-app-frontend.onrender.com"] 
-        : ["http://localhost:5173"],
+    origin: allowedOrigins,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
 };
 
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.status(200).json({ 
-        status: 'OK', 
+app.get("/health", (req, res) => {
+    res.status(200).json({
+        status: "OK",
         timestamp: new Date().toISOString(),
-        uptime: process.uptime()
+        uptime: process.uptime(),
     });
 });
 
-// API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 
-// Serve static files in production
-if (process.env.NODE_ENV === "production") {
-    app.use(express.static(path.join(__dirname, "../frontend/chat_app_fronend/dist")));
+// Serve frontend static build in production, but NOT on Vercel
+// (Vercel deploys the frontend separately as a static build)
+if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
+    app.use(express.static(path.join(__dirname, "../../frontend/chat_app_fronend/dist")));
 
     app.get("*", (req, res) => {
-        res.sendFile(path.join(__dirname, "../frontend/chat_app_fronend", "dist", "index.html"));
+        res.sendFile(path.join(__dirname, "../../frontend/chat_app_fronend/dist/index.html"));
     });
 }
 
-// Error handling middleware
+// 404 handler — must come before error handler
+app.use("*", (req, res) => {
+    res.status(404).json({ message: "Route not found" });
+});
+
+// Global error handler — must be last (4-parameter signature required by Express)
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    res.status(500).json({ 
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'production' ? {} : err.message
+    console.error("Error:", err);
+    res.status(500).json({
+        message: "Internal server error",
+        error: process.env.NODE_ENV === "production" ? {} : err.message,
     });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-    res.status(404).json({ message: 'Route not found' });
-});
+// Start the HTTP server only when NOT running as a Vercel serverless function.
+// Vercel manages its own HTTP layer and calls the exported app handler directly.
+if (!process.env.VERCEL) {
+    connectDB().then(() => {
+        app.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    });
+}
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    connectDB();
-});
+export default app;
