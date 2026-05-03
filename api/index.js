@@ -1,6 +1,4 @@
 // Vercel serverless entry point.
-// Vercel invokes this as a function handler — it never calls app.listen().
-// We connect to MongoDB once per cold start and then delegate every request to Express.
 import app from '../backend/src/server.js';
 import { connectDB } from '../backend/src/lib/db.js';
 
@@ -8,8 +6,14 @@ let isDbConnected = false;
 
 export default async function handler(req, res) {
     if (!isDbConnected) {
-        await connectDB();
-        isDbConnected = true;
+        try {
+            await connectDB();
+            isDbConnected = true;
+        } catch (err) {
+            // DB failed — still handle the request so Vercel returns a clean error
+            // instead of a function crash. API routes that need DB return 500.
+            console.error("DB connection failed in Vercel handler:", err.message);
+        }
     }
     return app(req, res);
 }

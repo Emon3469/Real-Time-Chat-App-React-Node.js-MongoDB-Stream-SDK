@@ -1,4 +1,5 @@
 import express from "express";
+import compression from "compression";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
@@ -35,6 +36,7 @@ const corsOptions = {
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
 };
 
+app.use(compression()); // gzip all responses — reduces payload by 60-80%
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());

@@ -53,22 +53,23 @@ const userSchema = new mongoose.Schema(
     }
 );
 
-userSchema.pre("save",async function (next) {
-    if(!this.isModified("password")) return next();
+// Compound indexes for the queries we actually run
+userSchema.index({ isOnboarded: 1, _id: 1 }); // getRecommendedUsers filter
+userSchema.index({ friends: 1 });              // friend lookups
 
-    try{
+userSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) return next();
+    try {
         const salt = await bcrypt.genSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
         next();
-    }
-    catch(error){
+    } catch (error) {
         next(error);
     }
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
-    const isPasswordCorrect = await bcrypt.compare(enteredPassword, this.password);
-    return isPasswordCorrect;
+    return bcrypt.compare(enteredPassword, this.password);
 };
 
 const User = mongoose.model("User", userSchema);

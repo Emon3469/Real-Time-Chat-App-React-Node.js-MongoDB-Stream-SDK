@@ -6,18 +6,15 @@ const useAuthUser = () => {
         queryKey: ["authUser"],
         queryFn: getAuthUser,
         retry: false,
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
-        onError: (error) => {
-            console.log("Authentication check failed:", error);
-        }
     });
 
     return {
-        isLoading: authUser.isLoading, 
+        isLoading: authUser.isLoading,
         authUser: authUser.data?.user,
-        error: authUser.error
+        error: authUser.error,
     };
-}
+};
 
 export default useAuthUser;

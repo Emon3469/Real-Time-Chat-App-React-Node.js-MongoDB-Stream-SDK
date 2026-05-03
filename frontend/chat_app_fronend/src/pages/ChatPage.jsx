@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
-import useAuthUser from "../hooks/useAuthUser"
+import useAuthUser from "../hooks/useAuthUser";
 import { useQuery } from "@tanstack/react-query";
 import { getStreamToken } from "../lib/api";
 
@@ -12,7 +12,7 @@ import {
   MessageList,
   Thread,
   Window,
-} from "stream-chat-react"
+} from "stream-chat-react";
 import { StreamChat } from "stream-chat";
 import toast from "react-hot-toast";
 import ChatLoader from "../components/ChatLoader";
@@ -27,66 +27,81 @@ const ChatPage = () => {
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Track whether WE connected so we only disconnect when we did
+  const didConnect = useRef(false);
+
   const { authUser } = useAuthUser();
-  const {data: tokenData} = useQuery({
+  const { data: tokenData } = useQuery({
     queryKey: ["streamToken"],
     queryFn: getStreamToken,
     enabled: !!authUser,
+    staleTime: 45 * 60 * 1000, // matches server-side token cache (50 min)
   });
 
   useEffect(() => {
+    if (!tokenData?.token || !authUser) return;
+
+    let client;
+
     const initChat = async () => {
-      if(!tokenData?.token || !authUser) return;
+      try {
+        client = StreamChat.getInstance(STREAM_API_KEY);
 
-      try{
-        console.log("Initializing stream chat client...");
+        // Reuse the existing WebSocket if already connected — avoids
+        // reconnecting every time the user navigates between chat pages
+        if (!client.userID) {
+          await client.connectUser(
+            {
+              id: authUser._id,
+              name: authUser.fullName,
+              image: authUser.profilePic,
+            },
+            tokenData.token
+          );
+          didConnect.current = true;
+        }
 
-        const client = StreamChat.getInstance(STREAM_API_KEY);
+        const channelId = [authUser._id, targetUserId].sort().join("-");
+        const currChannel = client.channel("messaging", channelId, {
+          members: [authUser._id, targetUserId],
+        });
 
-        await client.connectUser({
-           id: authUser._id,
-           name: authUser.fullName,
-           image: authUser.profilePic,
-        },
-        tokenData.token
-       );
-
-       const channelId = [authUser._id, targetUserId].sort().join("-");
-
-       const currChannel = client.channel("messaging", channelId, {
-         members: [authUser._id, targetUserId],
-       });
-
-       await currChannel.watch();
-
-       setChatClient(client);
-       setChannel(currChannel);
-      }
-      catch(error){
-        console.error("Error Initializing chat:", error);
+        await currChannel.watch();
+        setChatClient(client);
+        setChannel(currChannel);
+      } catch (error) {
+        console.error("Error initializing chat:", error);
         toast.error("Could not connect to Chat. Please try again.");
-      }
-      finally{
+      } finally {
         setLoading(false);
       }
     };
 
     initChat();
+
+    return () => {
+      // Stop watching this channel; keeps the WS alive for the next chat page
+      if (channel) channel.stopWatching().catch(() => {});
+      // Only disconnect if this component established the connection
+      if (didConnect.current && client) {
+        client.disconnectUser().catch(() => {});
+        didConnect.current = false;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tokenData, authUser, targetUserId]);
 
   const handleVideoCall = () => {
-    if(channel) {
+    if (channel) {
       const callUrl = `${window.location.origin}/call/${channel.id}`;
-
       channel.sendMessage({
-        text: `I've Started a video call, Join me here: ${callUrl}`,
+        text: `I've started a video call. Join me here: ${callUrl}`,
       });
-
-      toast.success("Video call Link sent successfully!");
+      toast.success("Video call link sent!");
     }
   };
 
-  if(loading || !chatClient || !channel) return <ChatLoader />;
+  if (loading || !chatClient || !channel) return <ChatLoader />;
 
   return (
     <div className="h-[93vh]">
@@ -107,4 +122,4 @@ const ChatPage = () => {
   );
 };
 
-export default ChatPage
+export default ChatPage;
