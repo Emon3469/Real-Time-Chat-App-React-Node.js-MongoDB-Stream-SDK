@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes} from "react-router";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 // Lazy load page components for better performance
 const HomePage = lazy(() => import("./pages/HomePage.jsx"));
@@ -21,11 +21,24 @@ import { useThemeStore } from "./stores/useThemeStore.js";
 const App = () => {
   const { isLoading, authUser } = useAuthUser();
   const { theme } = useThemeStore();
+  const [slowLoad, setSlowLoad] = useState(false);
+
+  // After 4 s of loading tell the user the server is waking up (Render free
+  // tier cold-start takes ~30-60 s). Resets automatically once loading finishes.
+  useEffect(() => {
+    if (!isLoading) { setSlowLoad(false); return; }
+    const t = setTimeout(() => setSlowLoad(true), 4000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   const isAuthenticated = Boolean(authUser);
   const isOnboarded = authUser?.isOnboarded;
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) return (
+    <PageLoader
+      message={slowLoad ? "Server is starting up, please wait (~30s on first visit)..." : "Loading..."}
+    />
+  );
 
   return(
      <div className="h-screen" data-theme = {theme}>

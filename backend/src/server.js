@@ -50,9 +50,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 
-// Serve frontend static build in production, but NOT on Vercel
-// (Vercel deploys the frontend separately as a static build)
-if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
+// Serve frontend static build only when running as a monolith (Render single-service).
+// Skip when FRONTEND_URL is set (frontend deployed on Netlify/Vercel separately)
+// or when running as a Vercel serverless function.
+if (process.env.NODE_ENV === "production" && !process.env.VERCEL && !process.env.FRONTEND_URL) {
     app.use(express.static(path.join(__dirname, "../../frontend/chat_app_fronend/dist")));
 
     app.get("*", (req, res) => {
