@@ -28,11 +28,20 @@ const SignUpPage = () => {
           </div>
 
           {error && (
-            <div className="alert alert-error mb-4">
+            <div className="alert alert-error mb-4 flex flex-col items-start gap-2">
               <span>
                 {error?.response?.data?.message ||
-                  "Cannot reach the server. Please wait a moment and try again."}
+                  "Cannot reach the server. It may be starting up — please wait a moment."}
               </span>
+              {!error?.response && (
+                <button
+                  className="btn btn-sm btn-outline btn-error"
+                  onClick={() => signupMutation(signupData)}
+                  disabled={isPending}
+                >
+                  Retry
+                </button>
+              )}
             </div>
           )}
 

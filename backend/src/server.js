@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import mongoose from "mongoose";
 
 import authRoutes from "./routes/auth_route.js";
 import userRoutes from "./routes/user_route.js";
@@ -39,10 +40,12 @@ app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
 app.get("/health", (req, res) => {
+    const dbStates = ["disconnected", "connected", "connecting", "disconnecting"];
     res.status(200).json({
         status: "OK",
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
+        database: dbStates[mongoose.connection.readyState] || "unknown",
     });
 });
 
@@ -78,11 +81,20 @@ app.use((err, req, res, next) => {
 // Start the HTTP server only when NOT running as a Vercel serverless function.
 // Vercel manages its own HTTP layer and calls the exported app handler directly.
 if (!process.env.VERCEL) {
-    connectDB().then(() => {
-        app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
+    connectDB()
+        .catch((err) => {
+            // DB failed after all retries. Log it but DO NOT exit — keeping the
+            // process alive means Render won't crash-loop, the /health endpoint
+            // stays reachable (so UptimeRobot keeps the service warm), and API
+            // routes return a clean 500 instead of a connection-refused error.
+            console.error("MongoDB connection failed — server will start without DB:", err.message);
+            console.error("Fix: allow 0.0.0.0/0 in MongoDB Atlas → Network Access.");
+        })
+        .finally(() => {
+            app.listen(PORT, () => {
+                console.log(`Server is running on port ${PORT}`);
+            });
         });
-    });
 }
 
 export default app;

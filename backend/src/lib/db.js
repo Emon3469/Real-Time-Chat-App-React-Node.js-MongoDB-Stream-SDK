@@ -1,19 +1,31 @@
 import mongoose from "mongoose";
 
+const RETRY_DELAYS = [3000, 5000, 10000]; // 3 attempts: wait 3s, 5s, 10s
+
 export const connectDB = async () => {
-    try{
-        const conn = await mongoose.connect(process.env.MONGO_URI, {
-            serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-            socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-            bufferCommands: false, // Disable mongoose buffering
-            maxPoolSize: 10, // Maintain up to 10 socket connections
-            minPoolSize: 5, // Maintain a minimum of 5 socket connections
-            maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
-        });
-        console.log(`MongoDB Connected: ${conn.connection.host}`);
+    for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
+        try {
+            const conn = await mongoose.connect(process.env.MONGO_URI, {
+                serverSelectionTimeoutMS: 8000,
+                socketTimeoutMS: 45000,
+                bufferCommands: false,
+                maxPoolSize: 10,
+                minPoolSize: 2,
+                maxIdleTimeMS: 30000,
+            });
+            console.log(`MongoDB Connected: ${conn.connection.host}`);
+            return; // success
+        } catch (error) {
+            const isLast = attempt === RETRY_DELAYS.length;
+            if (isLast) {
+                // Throw so server.js can decide — no process.exit here.
+                // Exiting would cause Render to crash-loop the service.
+                throw error;
+            }
+            const delay = RETRY_DELAYS[attempt];
+            console.error(`MongoDB connection failed (attempt ${attempt + 1}): ${error.message}`);
+            console.log(`Retrying in ${delay / 1000}s...`);
+            await new Promise((res) => setTimeout(res, delay));
+        }
     }
-    catch(error){
-        console.log("Error in connecting to MongoDB", error);
-        process.exit(1);
-    }
-}
+};
