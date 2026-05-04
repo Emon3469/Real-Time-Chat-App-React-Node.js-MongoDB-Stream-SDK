@@ -120,31 +120,28 @@ export async function onBoard(req, res) {
     try{
         const userId = req.user._id;
 
-        const { fullName, bio, nativeLanguage, learningLanguage, location } = req.body;
+        const { fullName, username, bio, location, profilePic } = req.body;
 
-        if(!fullName || !bio || !nativeLanguage || !learningLanguage || !location){
-            return res.status(400).json({
-                message: "All fields are required",
-                missingFields: [
-                    !fullName && "fullName",
-                    !bio && "bio",
-                    !nativeLanguage && "nativeLanguage",
-                    !learningLanguage && "learningLanguage",
-                    !location && "location",
-                ].filter(Boolean),
-            });
+        if(!fullName){
+            return res.status(400).json({ message: "Full name is required" });
         }
 
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            {
-                ...req.body,
-                isOnboarded: true,
-            },
-            {
-                new: true
-            }
-        );
+        // Reject suspiciously large payloads (base64 images should be well under 1MB)
+        if (profilePic && profilePic.length > 1_500_000) {
+            return res.status(400).json({ message: "Profile picture is too large. Please use a smaller image." });
+        }
+
+        const updateData = {
+            fullName,
+            bio: bio || "",
+            location: location || "",
+            isOnboarded: true,
+        };
+
+        if (username) updateData.username = username.toLowerCase().replace(/\s+/g, "");
+        if (profilePic) updateData.profilePic = profilePic;
+
+        const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
 
         if(!updatedUser) {
             return res.status(404).json({message: "User not found"});
@@ -156,7 +153,6 @@ export async function onBoard(req, res) {
                 name: updatedUser.fullName,
                 image: updatedUser.profilePic || "",
             });
-            console.log(`Stream user updated onboarding for ${updatedUser.fullName}`);
         }
         catch(streamError){
             console.log("Error updating Stream user during onboarding: ", streamError.message);

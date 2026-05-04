@@ -17,19 +17,16 @@ const userSchema = new mongoose.Schema(
             required: true,
             minlength: 6,
         },
+        username: {
+            type: String,
+            default: "",
+            trim: true,
+        },
         bio: {
             type: String,
             default: "",
         },
         profilePic: {
-            type: String,
-            default: "",
-        },
-        nativeLanguage: {
-            type: String,
-            default: "",
-        },
-        learningLanguage: {
             type: String,
             default: "",
         },
