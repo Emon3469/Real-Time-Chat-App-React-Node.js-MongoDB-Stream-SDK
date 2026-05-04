@@ -56,8 +56,12 @@ const ChatPage = () => {
         client = StreamChat.getInstance(STREAM_API_KEY);
 
         if (!client.userID) {
+          // Stream enforces 5 KB on user data — never pass base64 images
+          const streamImage = authUser.profilePic?.startsWith("data:")
+            ? ""
+            : authUser.profilePic || "";
           await client.connectUser(
-            { id: authUser._id, name: authUser.fullName, image: authUser.profilePic },
+            { id: authUser._id, name: authUser.fullName, image: streamImage },
             tokenData.token
           );
           didConnect.current = true;

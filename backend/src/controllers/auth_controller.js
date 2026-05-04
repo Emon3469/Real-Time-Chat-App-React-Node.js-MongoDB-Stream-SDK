@@ -40,7 +40,7 @@ export async function signup(req, res) {
             await upsertStreamUser({
                 id: newUser._id.toString(),
                 name: newUser.fullName,
-                image: newUser.profilePic || "",
+                image: newUser.profilePic?.startsWith("data:") ? "" : newUser.profilePic || "",
             })
             console.log(`stream user created for ${newUser.fullName}`);
         }
@@ -148,10 +148,15 @@ export async function onBoard(req, res) {
         }
 
         try{
+            // Stream enforces a 5 KB limit on user data — never pass base64 strings.
+            // If the pic is a URL keep it; base64 uploads are stored in MongoDB only.
+            const streamImage = updatedUser.profilePic?.startsWith("data:")
+                ? ""
+                : updatedUser.profilePic || "";
            await upsertStreamUser({
                 id: updatedUser._id.toString(),
                 name: updatedUser.fullName,
-                image: updatedUser.profilePic || "",
+                image: streamImage,
             });
         }
         catch(streamError){
