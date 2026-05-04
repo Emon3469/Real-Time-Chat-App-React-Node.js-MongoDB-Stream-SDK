@@ -27,39 +27,43 @@ const ChatPage = () => {
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Track whether WE connected so we only disconnect when we did
   const didConnect = useRef(false);
+  // Keep a ref to the active channel so the cleanup always closes the right one
+  const channelRef = useRef(null);
 
   const { authUser } = useAuthUser();
   const { data: tokenData } = useQuery({
     queryKey: ["streamToken"],
     queryFn: getStreamToken,
     enabled: !!authUser,
-    staleTime: 45 * 60 * 1000, // matches server-side token cache (50 min)
+    staleTime: 45 * 60 * 1000,
   });
 
   useEffect(() => {
     if (!tokenData?.token || !authUser) return;
 
+    if (!STREAM_API_KEY) {
+      toast.error("Stream API key is not configured. Contact the site administrator.");
+      setLoading(false);
+      return;
+    }
+
     let client;
+    let cancelled = false;
 
     const initChat = async () => {
       try {
         client = StreamChat.getInstance(STREAM_API_KEY);
 
-        // Reuse the existing WebSocket if already connected — avoids
-        // reconnecting every time the user navigates between chat pages
         if (!client.userID) {
           await client.connectUser(
-            {
-              id: authUser._id,
-              name: authUser.fullName,
-              image: authUser.profilePic,
-            },
+            { id: authUser._id, name: authUser.fullName, image: authUser.profilePic },
             tokenData.token
           );
           didConnect.current = true;
         }
+
+        if (cancelled) return;
 
         const channelId = [authUser._id, targetUserId].sort().join("-");
         const currChannel = client.channel("messaging", channelId, {
@@ -67,34 +71,50 @@ const ChatPage = () => {
         });
 
         await currChannel.watch();
+
+        if (cancelled) {
+          currChannel.stopWatching().catch(() => {});
+          return;
+        }
+
+        channelRef.current = currChannel;
         setChatClient(client);
         setChannel(currChannel);
       } catch (error) {
-        console.error("Error initializing chat:", error);
-        toast.error("Could not connect to Chat. Please try again.");
+        if (cancelled) return;
+        console.error("Chat init error:", error);
+        const msg = error?.message || "";
+        if (msg.includes("token") || msg.includes("auth") || msg.includes("401")) {
+          toast.error("Authentication failed. Please log out and log back in.");
+        } else if (msg.includes("network") || msg.includes("connection")) {
+          toast.error("Network error. Check your connection and try again.");
+        } else {
+          toast.error("Could not connect to chat. Please refresh the page.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     initChat();
 
     return () => {
-      // Stop watching this channel; keeps the WS alive for the next chat page
-      if (channel) channel.stopWatching().catch(() => {});
-      // Only disconnect if this component established the connection
+      cancelled = true;
+      if (channelRef.current) {
+        channelRef.current.stopWatching().catch(() => {});
+        channelRef.current = null;
+      }
       if (didConnect.current && client) {
         client.disconnectUser().catch(() => {});
         didConnect.current = false;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tokenData, authUser, targetUserId]);
 
   const handleVideoCall = () => {
-    if (channel) {
-      const callUrl = `${window.location.origin}/call/${channel.id}`;
-      channel.sendMessage({
+    if (channelRef.current) {
+      const callUrl = `${window.location.origin}/call/${channelRef.current.id}`;
+      channelRef.current.sendMessage({
         text: `I've started a video call. Join me here: ${callUrl}`,
       });
       toast.success("Video call link sent!");

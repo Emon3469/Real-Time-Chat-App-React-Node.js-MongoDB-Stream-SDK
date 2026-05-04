@@ -29,6 +29,7 @@ const GroupChatPage = () => {
   const [loading, setLoading] = useState(true);
 
   const didConnect = useRef(false);
+  const channelRef = useRef(null);
 
   const { authUser } = useAuthUser();
 
@@ -48,7 +49,14 @@ const GroupChatPage = () => {
   useEffect(() => {
     if (!tokenData?.token || !authUser || !group?.streamChannelId) return;
 
+    if (!STREAM_API_KEY) {
+      toast.error("Stream API key is not configured.");
+      setLoading(false);
+      return;
+    }
+
     let client;
+    let cancelled = false;
 
     const init = async () => {
       try {
@@ -62,35 +70,47 @@ const GroupChatPage = () => {
           didConnect.current = true;
         }
 
+        if (cancelled) return;
+
         const ch = client.channel("messaging", group.streamChannelId);
         await ch.watch();
 
+        if (cancelled) {
+          ch.stopWatching().catch(() => {});
+          return;
+        }
+
+        channelRef.current = ch;
         setChatClient(client);
         setChannel(ch);
       } catch (err) {
-        console.error("GroupChatPage init error:", err);
-        toast.error("Could not connect to group chat.");
+        if (cancelled) return;
+        console.error("Group chat init error:", err);
+        toast.error("Could not connect to group chat. Please refresh.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     init();
 
     return () => {
-      if (channel) channel.stopWatching().catch(() => {});
+      cancelled = true;
+      if (channelRef.current) {
+        channelRef.current.stopWatching().catch(() => {});
+        channelRef.current = null;
+      }
       if (didConnect.current && client) {
         client.disconnectUser().catch(() => {});
         didConnect.current = false;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tokenData, authUser, group]);
 
   const handleGroupCall = () => {
-    if (!channel || !group) return;
+    if (!channelRef.current || !group) return;
     const callUrl = `${window.location.origin}/call/${group.streamChannelId}`;
-    channel.sendMessage({
+    channelRef.current.sendMessage({
       text: `📞 Group call started — join here: ${callUrl}`,
     });
     toast.success("Call link sent to the group!");
@@ -101,23 +121,18 @@ const GroupChatPage = () => {
 
   return (
     <div className="h-[93vh] flex flex-col">
-      {/* Group call bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-base-200 border-b border-base-300">
+      {/* Group info bar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-base-200 border-b border-base-300 shrink-0">
         <div className="flex items-center gap-2">
           <div className="size-7 rounded-lg bg-primary flex items-center justify-center text-primary-content text-xs font-bold select-none">
             {group?.name?.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <span className="text-sm font-semibold">{group?.name}</span>
-            <span className="text-xs text-base-content/50 ml-2">
-              {group?.members?.length} members
-            </span>
-          </div>
+          <span className="text-sm font-semibold">{group?.name}</span>
+          <span className="text-xs text-base-content/50">
+            · {group?.members?.length} members
+          </span>
         </div>
-        <button
-          className="btn btn-secondary btn-sm gap-2"
-          onClick={handleGroupCall}
-        >
+        <button className="btn btn-secondary btn-sm gap-2" onClick={handleGroupCall}>
           <PhoneCallIcon className="size-4" />
           Group Call
         </button>
