@@ -9,6 +9,8 @@ const NotificationsPage = lazy(() => import("./pages/NotificationsPage.jsx"));
 const CallPage = lazy(() => import("./pages/CallPage.jsx"));
 const ChatPage = lazy(() => import("./pages/ChatPage.jsx"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage.jsx"));
+const GroupsPage = lazy(() => import("./pages/GroupsPage.jsx"));
+const GroupChatPage = lazy(() => import("./pages/GroupChatPage.jsx"));
 
 import { Toaster } from "react-hot-toast";
 
@@ -96,6 +98,30 @@ const App = () => {
                isAuthenticated && isOnboarded ? (
                  <Layout showSidebar={false}>
                    <ChatPage />
+                 </Layout>
+               ) : (
+                 <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
+               )
+             }
+           />
+           <Route
+             path="/groups"
+             element={
+               isAuthenticated && isOnboarded ? (
+                 <Layout showSidebar={true}>
+                   <GroupsPage />
+                 </Layout>
+               ) : (
+                 <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
+               )
+             }
+           />
+           <Route
+             path="/groups/:groupId/chat"
+             element={
+               isAuthenticated && isOnboarded ? (
+                 <Layout showSidebar={false}>
+                   <GroupChatPage />
                  </Layout>
                ) : (
                  <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />

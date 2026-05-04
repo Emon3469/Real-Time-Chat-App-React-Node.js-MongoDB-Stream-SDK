@@ -1,10 +1,11 @@
 import { Link, useLocation } from "react-router";
 import useAuthUser from "../hooks/useAuthUser";
-import { BellIcon, HomeIcon, MessageSquareIcon, UsersIcon } from "lucide-react";
+import { BellIcon, HomeIcon, UsersIcon } from "lucide-react";
 import logo from "../assets/logo.svg";
 
 const NAV_ITEMS = [
   { to: "/", icon: HomeIcon, label: "Home" },
+  { to: "/groups", icon: UsersIcon, label: "Groups" },
   { to: "/notifications", icon: BellIcon, label: "Notifications" },
 ];
 

@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 import authRoutes from "./routes/auth_route.js";
 import userRoutes from "./routes/user_route.js";
 import chatRoutes from "./routes/chat_route.js";
+import groupRoutes from "./routes/group_route.js";
 
 import { connectDB } from "./lib/db.js";
 
@@ -54,6 +55,7 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/groups", groupRoutes);
 
 // Serve frontend static build only when running as a monolith (Render single-service).
 // Skip when FRONTEND_URL is set (frontend deployed on Netlify/Vercel separately)

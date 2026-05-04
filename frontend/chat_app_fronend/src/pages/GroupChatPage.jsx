@@ -1,0 +1,144 @@
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router";
+import useAuthUser from "../hooks/useAuthUser";
+import { useQuery } from "@tanstack/react-query";
+import { getGroupById, getStreamToken } from "../lib/api";
+
+import {
+  Channel,
+  ChannelHeader,
+  Chat,
+  MessageInput,
+  MessageList,
+  Thread,
+  Window,
+} from "stream-chat-react";
+import { StreamChat } from "stream-chat";
+import toast from "react-hot-toast";
+import ChatLoader from "../components/ChatLoader";
+import { PhoneCallIcon } from "lucide-react";
+
+const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY;
+
+const GroupChatPage = () => {
+  const { groupId } = useParams();
+  const navigate = useNavigate();
+
+  const [chatClient, setChatClient] = useState(null);
+  const [channel, setChannel] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const didConnect = useRef(false);
+
+  const { authUser } = useAuthUser();
+
+  const { data: tokenData } = useQuery({
+    queryKey: ["streamToken"],
+    queryFn: getStreamToken,
+    enabled: !!authUser,
+    staleTime: 45 * 60 * 1000,
+  });
+
+  const { data: group } = useQuery({
+    queryKey: ["group", groupId],
+    queryFn: () => getGroupById(groupId),
+    enabled: !!groupId,
+  });
+
+  useEffect(() => {
+    if (!tokenData?.token || !authUser || !group?.streamChannelId) return;
+
+    let client;
+
+    const init = async () => {
+      try {
+        client = StreamChat.getInstance(STREAM_API_KEY);
+
+        if (!client.userID) {
+          await client.connectUser(
+            { id: authUser._id, name: authUser.fullName, image: authUser.profilePic },
+            tokenData.token
+          );
+          didConnect.current = true;
+        }
+
+        const ch = client.channel("messaging", group.streamChannelId);
+        await ch.watch();
+
+        setChatClient(client);
+        setChannel(ch);
+      } catch (err) {
+        console.error("GroupChatPage init error:", err);
+        toast.error("Could not connect to group chat.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
+
+    return () => {
+      if (channel) channel.stopWatching().catch(() => {});
+      if (didConnect.current && client) {
+        client.disconnectUser().catch(() => {});
+        didConnect.current = false;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tokenData, authUser, group]);
+
+  const handleGroupCall = () => {
+    if (!channel || !group) return;
+    const callUrl = `${window.location.origin}/call/${group.streamChannelId}`;
+    channel.sendMessage({
+      text: `📞 Group call started — join here: ${callUrl}`,
+    });
+    toast.success("Call link sent to the group!");
+    navigate(`/call/${group.streamChannelId}`);
+  };
+
+  if (loading || !chatClient || !channel) return <ChatLoader />;
+
+  return (
+    <div className="h-[93vh] flex flex-col">
+      {/* Group call bar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-base-200 border-b border-base-300">
+        <div className="flex items-center gap-2">
+          <div className="size-7 rounded-lg bg-primary flex items-center justify-center text-primary-content text-xs font-bold select-none">
+            {group?.name?.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <span className="text-sm font-semibold">{group?.name}</span>
+            <span className="text-xs text-base-content/50 ml-2">
+              {group?.members?.length} members
+            </span>
+          </div>
+        </div>
+        <button
+          className="btn btn-secondary btn-sm gap-2"
+          onClick={handleGroupCall}
+        >
+          <PhoneCallIcon className="size-4" />
+          Group Call
+        </button>
+      </div>
+
+      <div className="flex-1 min-h-0">
+        <Chat client={chatClient}>
+          <Channel channel={channel}>
+            <div className="w-full h-full">
+              <Window>
+                <ChannelHeader />
+                <MessageList />
+                <MessageInput focus />
+              </Window>
+            </div>
+            <Thread />
+          </Channel>
+        </Chat>
+      </div>
+    </div>
+  );
+};
+
+export default GroupChatPage;

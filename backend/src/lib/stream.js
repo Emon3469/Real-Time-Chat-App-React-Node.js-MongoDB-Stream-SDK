@@ -31,3 +31,32 @@ export const generateStreamToken = (userId) => {
         throw error;
     }
 };
+
+export const createGroupChannel = async (channelId, name, memberIds, creatorId) => {
+    const channel = streamClient.channel("messaging", channelId, {
+        name,
+        members: memberIds.map(String),
+        created_by_id: creatorId.toString(),
+    });
+    await channel.create();
+    return channel;
+};
+
+export const deleteGroupChannel = async (channelId) => {
+    try {
+        const channel = streamClient.channel("messaging", channelId);
+        await channel.delete();
+    } catch (err) {
+        console.error("Error deleting Stream channel:", err.message);
+    }
+};
+
+export const addMemberToChannel = async (channelId, userId) => {
+    const channel = streamClient.channel("messaging", channelId);
+    await channel.addMembers([userId.toString()]);
+};
+
+export const removeMemberFromChannel = async (channelId, userId) => {
+    const channel = streamClient.channel("messaging", channelId);
+    await channel.removeMembers([userId.toString()]);
+};
